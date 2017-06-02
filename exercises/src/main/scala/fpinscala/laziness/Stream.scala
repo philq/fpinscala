@@ -17,20 +17,65 @@ trait Stream[+A] {
     case Empty => None
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
-  def take(n: Int): Stream[A] = sys.error("todo")
 
-  def drop(n: Int): Stream[A] = sys.error("todo")
+  //@annotation.tailrec
+  final def take(n: Int): Stream[A] = this match {
+      case Cons(h, t) if n >= 1 => cons(h(), t().take(n-1))
+      case Cons(h, _) if n == 1 => cons(h(), Stream.empty)
+      case _ => Stream.empty
+    }
 
-  def takeWhile(p: A => Boolean): Stream[A] = sys.error("todo")
 
-  def forAll(p: A => Boolean): Boolean = sys.error("todo")
+  @annotation.tailrec
+  final def drop(n: Int): Stream[A] = this match {
+    case Cons(_, t) if n > 0 => t().drop(n - 1)
+    case _ => this
+  }
 
-  def headOption: Option[A] = sys.error("todo")
+  def takeWhile(p: A => Boolean): Stream[A] = this match {
+    case Cons(h, t) if p(h()) => cons(h(), t().takeWhile(p))
+    case _ => Stream.empty
+  }
+
+  def takeWhile2(p: A => Boolean): Stream[A] =
+    foldRight(empty[A])((x, stream) => if (p(x)) cons(x, stream) else Stream.empty)
+
+  def forAll(p: A => Boolean): Boolean =
+    foldRight(true)((x, fold) => p(x) && fold)
+
+  def headOption: Option[A] = this match {
+    case Cons(h, t) => Some(h())
+    case _ => None
+  }
+
+  def headOption2: Option[A] =
+    foldRight(Option.empty[A])((x, _) => Some(x))
+
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
 
+  def map[B](f: A => B): Stream[B] =
+    foldRight(empty[B])((x, stream) => cons(f(x), stream))
+
+  def filter(p: A => Boolean): Stream[A] =
+    foldRight(empty[A])((x, stream) => if (p(x)) cons(x, stream) else stream)
+
+  def append[U >: A](str: Stream[U]): Stream[U] =
+    foldRight(str)((x, stream) => cons(x, stream))
+
+  def flatMap[B](f: A => Stream[B]): Stream[B] =
+    foldRight(empty[B])((x, stream) => f(x).append(stream))
+
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+
+  def toList: List[A] =
+    this.foldRight(Nil: List[A])((x, list) => x :: list)
+
+  def toList2: List[A] = this match {
+    case Cons(h, t) => h()::t().toList2
+    case _ => Nil
+  }
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]

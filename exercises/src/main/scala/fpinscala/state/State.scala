@@ -30,19 +30,55 @@ object RNG {
       (f(a), rng2)
     }
 
-  def nonNegativeInt(rng: RNG): (Int, RNG) = ???
+  def nonNegativeInt(rng: RNG): (Int, RNG) = {
+    val (_n, rng2) = rng.nextInt
+    (if (_n < 0) -(_n + 1) else _n, rng2)
+  }
 
-  def double(rng: RNG): (Double, RNG) = ???
 
-  def intDouble(rng: RNG): ((Int,Double), RNG) = ???
+  def double2: Rand[Double] =
+    map(nonNegativeInt)(_ / (Int.MaxValue.toDouble + 1))
 
-  def doubleInt(rng: RNG): ((Double,Int), RNG) = ???
 
-  def double3(rng: RNG): ((Double,Double,Double), RNG) = ???
+  def double(rng: RNG): (Double, RNG) = {
+    val (i, r) = nonNegativeInt(rng)
+    (i / (Int.MaxValue.toDouble+ 1), r)
+  }
 
-  def ints(count: Int)(rng: RNG): (List[Int], RNG) = ???
+  def intDouble(rng: RNG): ((Int,Double), RNG) = {
+    val (i, r1) = rng.nextInt
+    val (d, r2) = double(r1)
+    ((i, d), r2)
+  }
 
-  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = ???
+  def doubleInt(rng: RNG): ((Double,Int), RNG) = {
+    val ((i, d), r) = intDouble(rng)
+    ((d, i), r)
+  }
+
+  def double3(rng: RNG): ((Double,Double,Double), RNG) = {
+    val (d1, r1) = double(rng)
+    val (d2, r2) = double(r1)
+    val (d3, r3) = double(r2)
+    ((d1, d2, d3), r3)
+  }
+
+  def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
+    if (count <= 0) {
+      (Nil, rng)
+    } else {
+      val (i, r) = rng.nextInt
+      val (l, r2) = ints(count - 1)(r)
+      (i :: l, r2)
+    }
+  }
+
+  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    rng => {
+      val (a, r2) = ra(rng)
+      val (b, r3) = rb(r2)
+      (f(a, b), r3)
+    }
 
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = ???
 
